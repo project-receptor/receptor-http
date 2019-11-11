@@ -31,7 +31,7 @@ async def request(method, url, extra_data, queue):
     queue.done = True
 
 
-def execute(message):
+def execute(message, config):
     loop = asyncio.get_event_loop()
     queue = ResponseQueue(loop=loop)
     payload = json.loads(message.raw_payload)
