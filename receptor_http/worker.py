@@ -1,42 +1,36 @@
-import asyncio
-import aiohttp
-import functools
 import json
+import logging
+import requests
+
+logger = logging.getLogger(__name__)
 
 
-class ResponseQueue(asyncio.Queue):
-
-    def __init__(self, *args, **kwargs):
-        self.done = False
-        super().__init__(*args, **kwargs)
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        if self.done:
-            raise StopAsyncIteration
-        return await self.get()
+def configure_logger():
+    receptor_logger = logging.getLogger('receptor')
+    logger.setLevel(receptor_logger.level)
+    for handler in receptor_logger.handlers:
+        logger.addHandler(handler)
 
 
-async def request(method, url, extra_data, queue):
+def execute(message, config, result_queue):
+    configure_logger()
+
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.request(method, url, **extra_data) as response:
-                response_payload = dict(status=response.status,
-                                        body=await response.text())
-        await queue.put(response_payload)
-    except Exception as e:
-        await queue.put(str(e))
-    queue.done = True
+        payload = json.loads(message.raw_payload)
+    except json.JSONDecodeError as err:
+        logger.exception(err)
+        raise
+    logger.debug(f"Parsed payload: {payload}")
 
+    method = payload.pop("method")
+    url = payload.pop("url")
+    
+    logger.debug(f"Making {method} request for {url}")
+    try:
+        response = requests.request(method, url, **payload)
+    except requests.RequestException as err:
+        logger.excception(err)
+        raise
+    logger.debug(f"Got response status {response.status_code}")
 
-def execute(message, config):
-    loop = asyncio.get_event_loop()
-    queue = ResponseQueue(loop=loop)
-    payload = json.loads(message.raw_payload)
-    loop.create_task(request(payload.pop("method"),
-                             payload.pop("url"),
-                             payload,
-                             queue))
-    return queue
+    result_queue.put(response.text)
