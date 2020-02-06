@@ -1,6 +1,7 @@
 import json
 import logging
-import requests
+import asyncio
+import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,14 @@ def configure_logger():
     logger.setLevel(receptor_logger.level)
     for handler in receptor_logger.handlers:
         logger.addHandler(handler)
+
+
+async def get_url(method, url, **extra_data):
+    async with aiohttp.ClientSession() as session:
+        async with session.request(method, url, **extra_data) as response:
+            response_text = dict(status=response.status,
+                                    body=await response.text())
+    return response_text
 
 
 def execute(message, config, result_queue):
@@ -27,10 +36,10 @@ def execute(message, config, result_queue):
     
     logger.debug(f"Making {method} request for {url}")
     try:
-        response = requests.request(method, url, **payload)
-    except requests.RequestException as err:
-        logger.excception(err)
+        response = asyncio.run(get_url(method, url, **payload))
+    except Exception as err:
+        logger.exception(err)
         raise
-    logger.debug(f"Got response status {response.status_code}")
+    logger.debug(f"Got response status {response['status']}")
 
-    result_queue.put(response.text)
+    result_queue.put(response)
