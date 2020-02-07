@@ -17,7 +17,7 @@ async def get_url(method, url, **extra_data):
     async with aiohttp.ClientSession() as session:
         async with session.request(method, url, **extra_data) as response:
             response_text = dict(status=response.status,
-                                    body=await response.text())
+                                 body=await response.text())
     return response_text
 
 
