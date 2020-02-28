@@ -13,6 +13,11 @@ def configure_logger():
         logger.addHandler(handler)
 
 
+def receptor_export(func):
+    setattr(func, "receptor_export", True)
+    return func
+
+
 async def get_url(method, url, **extra_data):
     async with aiohttp.ClientSession() as session:
         async with session.request(method, url, **extra_data) as response:
@@ -21,6 +26,7 @@ async def get_url(method, url, **extra_data):
     return response_text
 
 
+@receptor_export
 def execute(message, config, result_queue):
     configure_logger()
 
