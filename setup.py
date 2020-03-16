@@ -19,6 +19,7 @@ setup(
     long_description_content_type='text/markdown',
     install_requires=[
         'requests',
+        "receptor>=1.0"
     ],
     zip_safe=False,
     entry_points={
